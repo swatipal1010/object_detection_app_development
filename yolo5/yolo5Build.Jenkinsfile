@@ -28,7 +28,7 @@ pipeline {
 
 
 
-        stage('Push to ECR') {
+        stage('Pushing to ECR') {
 
             steps {
 
