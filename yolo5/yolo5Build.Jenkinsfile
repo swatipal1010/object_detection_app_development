@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        stage('ECR authentication and Docker login') {
+        stage('ECR authentication and docker login') {
 
             steps {
 
