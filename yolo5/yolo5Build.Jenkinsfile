@@ -40,5 +40,14 @@ pipeline {
             }
 
         }
+
+        stage('Trigger Deploy') {
+    steps {
+        build job: 'Yolo5Deploy', wait: false, parameters: [
+            string(name: '854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.18', value: "854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.${BUILD_NUMBER}")
+        ]
+    }
+}
+
     }
 }
