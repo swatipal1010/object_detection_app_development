@@ -8,6 +8,14 @@ import uuid
 import yaml
 from loguru import logger
 
+import boto3
+import json 
+s3_client = boto3.client("s3")
+with open('config.json') as f:
+    config = json.load(f)
+bucket_name = config['img_bucket']
+
+
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
 
