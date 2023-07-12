@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: polybot-creds
+data:
+  token: NjM1ODA4NDg2OTpBQUc0d1FuWU1PVmNNMGdUbmhIdW9wdk83bHZ0eE8xU0NNWQ==
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polybot-deployment
+spec:
+  selector:
+    matchLabels:
+      app: polybot
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: polybot
+    spec:
+      containers:
+        - name: polybot
+          image: swati1010/polybot:0.0.1
+          resources:
+            requests:
+              cpu: 500m
+              memory: 0.5Gi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: telegramtoken
+              mountPath: /app/.telegramToken
+              readOnly: true
+              subPath: token
+      volumes:
+        - name: telegramtoken
+          secret:
+            secretName: polybot-creds

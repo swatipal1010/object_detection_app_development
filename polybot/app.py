@@ -4,7 +4,7 @@ import os
 import requests
 from collections import Counter
 
-YOLO_URL = 'http://localhost:8081'
+YOLO_URL = 'http://yolo5:8081'
 
 
 class Bot:
@@ -38,26 +38,22 @@ class Bot:
         return self.current_msg.content_type == 'photo'
 
     def download_user_photo(self, quality=2):
-        """
-        Downloads the photos that sent to the Bot to `photos` directory (should be existed)
-        :param quality: integer representing the file quality. Allowed values are [0, 1, 2]
-        :return:
-        """
         if not self.is_current_msg_photo():
-            raise RuntimeError(
-                f'Message content of type \'photo\' expected, but got {self.current_msg.content_type}')
+            raise RuntimeError(f"Message content of type 'photo' expected, but got {self.current_msg.content_type}")
 
         file_info = self.bot.get_file(self.current_msg.photo[quality].file_id)
         data = self.bot.download_file(file_info.file_path)
-        folder_name = file_info.file_path.split('/')[0]
+        file_path = file_info.file_path.split('/')[-1]  # Extract the filename from the file path
 
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
+        if not os.path.exists('photos'):
+            os.makedirs('photos')
 
-        with open(file_info.file_path, 'wb') as photo:
+        file_path = os.path.join('photos', file_path)  # Create the local file path
+
+        with open(file_path, 'wb') as photo:
             photo.write(data)
 
-        return file_info.file_path
+        return file_path
 
     def handle_message(self, message):
         """Bot Main message handler"""
@@ -74,7 +70,38 @@ class QuoteBot(Bot):
 
 
 class ObjectDetectionBot(Bot):
-    pass
+    def handle_message(self, message):
+        logger.info(f'Incoming message: {message}')
+
+        if message.chat.type == 'private' or ():
+            if self.is_current_msg_photo():
+                self.detect_objects()
+
+    def detect_objects(self):
+        photo_path = self.download_user_photo()
+
+        # Send the photo to the YOLO service for object detection
+        res = requests.post(f'{YOLO_URL}/predict', files={
+            'file': (photo_path, open(photo_path, 'rb'), 'image/png')
+        })
+
+        if res.status_code == 200:
+            detections = res.json()
+            logger.info(f'response from detect service with {detections}')
+
+            # calc summary
+            element_counts = Counter([l['class'] for l in detections])
+            summary = 'Objects Detected:\n'
+            for element, count in element_counts.items():
+                summary += f"{element}: {count}\n"
+
+            self.send_text_with_quote(summary, message_id=self.current_msg.message_id)
+
+            # Delete the photo file
+            os.remove(photo_path)
+
+        else:
+            self.send_text('Failed to perform object detection. Please try again later.')
 
 
 if __name__ == '__main__':
@@ -83,5 +110,30 @@ if __name__ == '__main__':
     with open('.telegramToken') as f:
         _token = f.read()
 
-    my_bot = Bot(_token)
+    my_bot = ObjectDetectionBot(_token)
+
+
+    @my_bot.bot.message_handler(commands=['start'])
+    def handle_start(message):
+        my_bot.send_text('Welcome to the POLY-vision bot. Send an image or tag an image with /yolo to detect objects.')
+
+
+    @my_bot.bot.message_handler(commands=['help'])
+    def handle_help(message):
+        help_text = 'How to use the bot:\n\n' \
+                    '/start - Start the bot and get a welcome message\n' \
+                    '/help - Get instructions on how to use the bot\n' \
+                    '/yolo - Tag an image to detect objects'
+        my_bot.send_text(help_text)
+
+
+    @my_bot.bot.message_handler(commands=['yolo'])
+    def handle_yolo(message):
+        if message.reply_to_message and message.reply_to_message.photo:
+            my_bot.current_msg = message.reply_to_message
+            my_bot.detect_objects()
+        else:
+            my_bot.send_text('Please tag an image or send an image for object detection.')
+
+
     my_bot.start()

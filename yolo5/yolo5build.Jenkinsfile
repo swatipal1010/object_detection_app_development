@@ -13,13 +13,13 @@ pipeline {
             }
 
         }
-        stage('Build') {
+        stage('Build stage') {
 
             steps {
 
                 sh '''
                 cd yolo5
-                docker build -t swati-jenkins .
+                docker build -t swati-yolo5 .
                 '''
 
             }
@@ -33,21 +33,21 @@ pipeline {
             steps {
 
                 sh '''
-                docker tag swati-jenkins:latest 854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.${BUILD_NUMBER}
-                docker push 854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.${BUILD_NUMBER}
+                docker tag swati-yolo5:latest 854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-yolo5:0.0.${BUILD_NUMBER}
+                docker push 854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-yolo5:0.0.${BUILD_NUMBER}
                 '''
 
             }
 
         }
 
-        stage('Trigger Deploy') {
+        /*stage('Trigger Deploy') {
     steps {
         build job: 'Yolo5Deploy', wait: false, parameters: [
             string(name: '854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.18', value: "854171615125.dkr.ecr.us-east-2.amazonaws.com/swati-jenkins:0.0.${BUILD_NUMBER}")
         ]
     }
-}
+}*/
 
     }
 }
